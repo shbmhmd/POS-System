@@ -157,7 +157,11 @@ const api = {
   // ========== Updater ==========
   updater: {
     check: () => ipcRenderer.invoke('updater:check'),
-    download: (url: string) => ipcRenderer.invoke('updater:download', url)
+    download: (url: string) => ipcRenderer.invoke('updater:download', url),
+    getVersion: () => ipcRenderer.invoke('updater:get-version'),
+    getChangelog: () => ipcRenderer.invoke('updater:get-changelog'),
+    getLastShownVersion: () => ipcRenderer.invoke('updater:get-last-shown-version'),
+    setLastShownVersion: (version: string) => ipcRenderer.invoke('updater:set-last-shown-version', version)
   }
 }
 
