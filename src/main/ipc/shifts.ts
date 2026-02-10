@@ -5,7 +5,7 @@ export function registerShiftHandlers(): void {
   ipcMain.handle('shifts:open', async (_event, data: {
     branch_id: number
     user_id: number
-    opening_cash: number
+    opening_cash?: number
   }) => {
     try {
       const db = getDatabase()
@@ -19,19 +19,33 @@ export function registerShiftHandlers(): void {
         return { success: false, error: 'You already have an open shift. Close it first.' }
       }
 
+      // Auto-calculate opening cash from last closed shift's closing cash
+      let openingCash = data.opening_cash ?? 0
+      if (data.opening_cash === undefined || data.opening_cash === null) {
+        const lastShift = db
+          .prepare(
+            `SELECT closing_cash FROM shifts
+             WHERE branch_id = ? AND status = 'closed'
+             ORDER BY closed_at DESC LIMIT 1`
+          )
+          .get(data.branch_id) as { closing_cash: number } | undefined
+
+        openingCash = lastShift?.closing_cash ?? 0
+      }
+
       const result = db
         .prepare(
           'INSERT INTO shifts (branch_id, user_id, opening_cash) VALUES (?, ?, ?)'
         )
-        .run(data.branch_id, data.user_id, data.opening_cash)
+        .run(data.branch_id, data.user_id, openingCash)
 
-      return { success: true, data: { id: result.lastInsertRowid } }
+      return { success: true, data: { id: result.lastInsertRowid, opening_cash: openingCash } }
     } catch (error) {
       return { success: false, error: (error as Error).message }
     }
   })
 
-  ipcMain.handle('shifts:close', async (_event, shiftId: number, closingCash: number, notes?: string) => {
+  ipcMain.handle('shifts:close', async (_event, shiftId: number, closingCash?: number, notes?: string) => {
     try {
       const db = getDatabase()
 
@@ -40,7 +54,7 @@ export function registerShiftHandlers(): void {
         return { success: false, error: 'Shift not found or already closed' }
       }
 
-      // Calculate expected cash
+      // Calculate expected cash from payments
       const cashPayments = db
         .prepare(
           `SELECT COALESCE(SUM(p.amount), 0) as total
@@ -51,7 +65,10 @@ export function registerShiftHandlers(): void {
         .get(shiftId) as { total: number }
 
       const expectedCash = shift.opening_cash + cashPayments.total - shift.total_refunds
-      const difference = closingCash - expectedCash
+
+      // Auto-calculate closing cash if not manually provided
+      const actualClosingCash = (closingCash !== undefined && closingCash !== null) ? closingCash : expectedCash
+      const difference = actualClosingCash - expectedCash
 
       db.prepare(
         `UPDATE shifts SET
@@ -62,13 +79,13 @@ export function registerShiftHandlers(): void {
            closed_at = datetime('now'),
            notes = ?
          WHERE id = ?`
-      ).run(closingCash, expectedCash, difference, notes ?? null, shiftId)
+      ).run(actualClosingCash, expectedCash, difference, notes ?? null, shiftId)
 
       return {
         success: true,
         data: {
           opening_cash: shift.opening_cash,
-          closing_cash: closingCash,
+          closing_cash: actualClosingCash,
           expected_cash: expectedCash,
           difference,
           total_sales: shift.total_sales,

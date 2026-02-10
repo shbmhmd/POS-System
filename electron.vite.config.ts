@@ -3,12 +3,38 @@ import { defineConfig, externalizeDepsPlugin } from 'electron-vite'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 import { config } from 'dotenv'
+import obfuscator from 'rollup-plugin-obfuscator'
 
 config()
 
+const obfuscatorOptions = {
+  compact: true,
+  controlFlowFlattening: true,
+  controlFlowFlatteningThreshold: 0.5,
+  deadCodeInjection: true,
+  deadCodeInjectionThreshold: 0.3,
+  debugProtection: false,
+  disableConsoleOutput: false,
+  identifierNamesGenerator: 'hexadecimal',
+  renameGlobals: false,
+  selfDefending: false,
+  simplify: true,
+  splitStrings: true,
+  splitStringsChunkLength: 10,
+  stringArray: true,
+  stringArrayCallsTransform: true,
+  stringArrayEncoding: ['base64'] as any,
+  stringArrayThreshold: 0.75,
+  transformObjectKeys: true,
+  unicodeEscapeSequence: false
+}
+
 export default defineConfig({
   main: {
-    plugins: [externalizeDepsPlugin()],
+    plugins: [
+      externalizeDepsPlugin(),
+      obfuscator({ options: obfuscatorOptions })
+    ],
     resolve: {
       alias: {
         '@main': resolve('src/main')
@@ -20,7 +46,10 @@ export default defineConfig({
     }
   },
   preload: {
-    plugins: [externalizeDepsPlugin()]
+    plugins: [
+      externalizeDepsPlugin(),
+      obfuscator({ options: obfuscatorOptions })
+    ]
   },
   renderer: {
     resolve: {
@@ -28,6 +57,10 @@ export default defineConfig({
         '@': resolve('src/renderer/src')
       }
     },
-    plugins: [react(), tailwindcss()]
+    plugins: [
+      react(),
+      tailwindcss(),
+      obfuscator({ options: obfuscatorOptions })
+    ]
   }
 })

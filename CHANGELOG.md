@@ -2,6 +2,22 @@
 
 All notable changes to POS System will be documented in this file.
 
+## [1.0.2] - 2026-02-11
+
+### Added
+- **Return / Refund** – New return dialog in POS (F5 shortcut) to look up sales by invoice, select items to return, and process refunds. Inventory is automatically restocked on return.
+- **Code Obfuscation** – Source code is now obfuscated in production builds for intellectual property protection
+- **Proprietary License** – Added proprietary LICENSE file
+
+### Changed
+- **Shift Opening** – No longer asks for manual cash amount. Opening cash is automatically calculated from the last closed shift's closing cash.
+- **Shift Closing** – No longer asks for manual cash counting. Closing cash is automatically calculated from opening cash + cash sales − refunds.
+- **Payment Dialog UI** – Payment method buttons and amount input are now properly stacked to prevent layout overflow
+
+### Fixed
+- Shift history showing 0 for revenue (was referencing non-existent `total_revenue` field instead of `total_sales`)
+- Active shift card showing wrong sales count (was using revenue field as count)
+
 ## [1.0.1] - 2026-02-11
 
 ### Added

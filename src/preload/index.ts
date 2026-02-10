@@ -89,7 +89,7 @@ const api = {
   // ========== Shifts ==========
   shifts: {
     open: (data: any) => ipcRenderer.invoke('shifts:open', data),
-    close: (shiftId: number, closingCash: number, notes?: string) =>
+    close: (shiftId: number, closingCash?: number, notes?: string) =>
       ipcRenderer.invoke('shifts:close', shiftId, closingCash, notes),
     getCurrent: (userId: number, branchId: number) =>
       ipcRenderer.invoke('shifts:get-current', userId, branchId),

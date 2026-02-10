@@ -14,7 +14,7 @@ import { formatCurrency } from '@/lib/utils'
 import {
   Search, ShoppingCart, Trash2, Plus, Minus, DollarSign,
   CreditCard, Banknote, Smartphone, Percent, Pause, Loader2,
-  X, Barcode
+  X, Barcode, RotateCcw
 } from 'lucide-react'
 import type { Product, PaymentMethod } from '@/types'
 
@@ -37,6 +37,7 @@ export default function POSPage() {
   const [showPayment, setShowPayment] = useState(false)
   const [showHeld, setShowHeld] = useState(false)
   const [showDiscount, setShowDiscount] = useState(false)
+  const [showReturn, setShowReturn] = useState(false)
 
   const searchRef = useRef<HTMLInputElement>(null)
   const barcodeBuffer = useRef('')
@@ -59,7 +60,8 @@ export default function POSPage() {
       if (e.key === 'F2') { e.preventDefault(); setShowPayment(true); return }
       if (e.key === 'F3') { e.preventDefault(); setShowHeld(true); return }
       if (e.key === 'F4') { e.preventDefault(); setShowDiscount(true); return }
-      if (e.key === 'Escape') { e.preventDefault(); setShowPayment(false); setShowHeld(false); setShowDiscount(false); return }
+      if (e.key === 'F5') { e.preventDefault(); setShowReturn(true); return }
+      if (e.key === 'Escape') { e.preventDefault(); setShowPayment(false); setShowHeld(false); setShowDiscount(false); setShowReturn(false); return }
     }
 
     window.addEventListener('keydown', handleKeyDown)
@@ -181,6 +183,7 @@ export default function POSPage() {
                 <kbd className="px-2 py-1 rounded bg-[var(--muted)] border">F2</kbd> Pay
                 <kbd className="px-2 py-1 rounded bg-[var(--muted)] border">F3</kbd> Held
                 <kbd className="px-2 py-1 rounded bg-[var(--muted)] border">F4</kbd> Discount
+                <kbd className="px-2 py-1 rounded bg-[var(--muted)] border">F5</kbd> Return
               </div>
             </div>
           </div>
@@ -198,6 +201,9 @@ export default function POSPage() {
             )}
           </h2>
           <div className="flex gap-1">
+            <Button variant="ghost" size="sm" onClick={() => setShowReturn(true)} title="Return / Refund (F5)">
+              <RotateCcw className="h-4 w-4" />
+            </Button>
             <Button variant="ghost" size="sm" onClick={() => setShowHeld(true)} title="Held Sales (F3)">
               <Pause className="h-4 w-4" />
             </Button>
@@ -345,6 +351,13 @@ export default function POSPage() {
         open={showHeld}
         onClose={() => setShowHeld(false)}
       />
+
+      {/* Return / Refund Dialog */}
+      <ReturnDialog
+        open={showReturn}
+        onClose={() => setShowReturn(false)}
+        currency={currency}
+      />
     </div>
   )
 }
@@ -447,10 +460,10 @@ function PaymentDialog({ open, onClose, currency }: { open: boolean; onClose: ()
           </div>
 
           {/* Payment Methods */}
-          <div className="space-y-2">
+          <div className="space-y-3">
             {payments.map((payment, idx) => (
-              <div key={idx} className="flex items-center gap-2">
-                <div className="flex gap-1">
+              <div key={idx} className="space-y-2 rounded-lg border border-[var(--border)] p-3">
+                <div className="flex flex-wrap gap-1">
                   {PAYMENT_METHODS.map((m) => {
                     const Icon = m.icon
                     return (
@@ -469,23 +482,26 @@ function PaymentDialog({ open, onClose, currency }: { open: boolean; onClose: ()
                     )
                   })}
                 </div>
-                <Input
-                  type="number"
-                  value={payment.amount || ''}
-                  onChange={(e) => {
-                    const updated = [...payments]
-                    updated[idx].amount = parseFloat(e.target.value) || 0
-                    setPayments(updated)
-                  }}
-                  className="w-28"
-                  min={0}
-                  step={0.01}
-                />
-                {payments.length > 1 && (
-                  <Button variant="ghost" size="sm" onClick={() => setPayments(payments.filter((_, i) => i !== idx))}>
-                    <X className="h-3 w-3" />
-                  </Button>
-                )}
+                <div className="flex items-center gap-2">
+                  <Label className="text-xs text-[var(--muted-foreground)] whitespace-nowrap">Amount:</Label>
+                  <Input
+                    type="number"
+                    value={payment.amount || ''}
+                    onChange={(e) => {
+                      const updated = [...payments]
+                      updated[idx].amount = parseFloat(e.target.value) || 0
+                      setPayments(updated)
+                    }}
+                    className="flex-1"
+                    min={0}
+                    step={0.01}
+                  />
+                  {payments.length > 1 && (
+                    <Button variant="ghost" size="sm" onClick={() => setPayments(payments.filter((_, i) => i !== idx))}>
+                      <X className="h-3 w-3" />
+                    </Button>
+                  )}
+                </div>
               </div>
             ))}
 
@@ -495,11 +511,11 @@ function PaymentDialog({ open, onClose, currency }: { open: boolean; onClose: ()
           </div>
 
           {/* Change / Remaining */}
-          <div className="flex justify-between text-sm">
+          <div className="flex justify-between items-center rounded-lg bg-[var(--muted)] p-3 text-sm">
             {remaining > 0 ? (
-              <><span className="text-[var(--destructive)]">Remaining:</span><span className="font-bold text-[var(--destructive)]">{formatCurrency(remaining, currency)}</span></>
+              <><span className="text-[var(--destructive)]">Remaining:</span><span className="text-lg font-bold text-[var(--destructive)]">{formatCurrency(remaining, currency)}</span></>
             ) : (
-              <><span>Change:</span><span className="font-bold text-green-600">{formatCurrency(change, currency)}</span></>
+              <><span>Change:</span><span className="text-lg font-bold text-green-600">{formatCurrency(change, currency)}</span></>
             )}
           </div>
 
@@ -574,6 +590,313 @@ function BillDiscountDialog({ open, onClose, currency }: { open: boolean; onClos
           <Button variant="outline" onClick={() => { cart.setBillDiscount(0, 'fixed'); onClose() }}>Clear</Button>
           <Button onClick={apply}>Apply</Button>
         </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  )
+}
+
+/* ───── Return / Refund Dialog ───── */
+function ReturnDialog({ open, onClose, currency }: { open: boolean; onClose: () => void; currency: string }) {
+  const { user } = useAuthStore()
+  const { currentBranch, currentShift } = useAppStore()
+
+  const [invoiceNumber, setInvoiceNumber] = useState('')
+  const [sale, setSale] = useState<any>(null)
+  const [searching, setSearching] = useState(false)
+  const [error, setError] = useState('')
+  const [processing, setProcessing] = useState(false)
+  const [success, setSuccess] = useState(false)
+
+  // Items selected for return: { [product_id]: quantity_to_return }
+  const [returnItems, setReturnItems] = useState<Record<number, number>>({})
+  const [reason, setReason] = useState('')
+  const [refundMethod, setRefundMethod] = useState<'cash' | 'card' | 'qr' | 'bank'>('cash')
+
+  // Reset on open
+  useEffect(() => {
+    if (open) {
+      setInvoiceNumber('')
+      setSale(null)
+      setReturnItems({})
+      setReason('')
+      setRefundMethod('cash')
+      setError('')
+      setSuccess(false)
+    }
+  }, [open])
+
+  const lookupSale = async () => {
+    if (!invoiceNumber.trim()) return
+    setSearching(true)
+    setError('')
+    setSale(null)
+    setReturnItems({})
+
+    try {
+      const result = await window.api.sales.getByInvoice(invoiceNumber.trim())
+      if (result.success && result.data) {
+        if (result.data.status === 'returned') {
+          setError('This sale has already been fully returned.')
+        } else if (result.data.status === 'voided') {
+          setError('This sale has been voided.')
+        } else {
+          setSale(result.data)
+          // Pre-select all items with full quantities
+          const items: Record<number, number> = {}
+          for (const item of result.data.items) {
+            items[item.product_id] = item.quantity
+          }
+          setReturnItems(items)
+        }
+      } else {
+        setError('Sale not found. Check the invoice number.')
+      }
+    } catch (err) {
+      setError((err as Error).message)
+    } finally {
+      setSearching(false)
+    }
+  }
+
+  const toggleItem = (productId: number, maxQty: number) => {
+    setReturnItems((prev) => {
+      const updated = { ...prev }
+      if (updated[productId]) {
+        delete updated[productId]
+      } else {
+        updated[productId] = maxQty
+      }
+      return updated
+    })
+  }
+
+  const updateReturnQty = (productId: number, qty: number, maxQty: number) => {
+    if (qty <= 0) {
+      setReturnItems((prev) => {
+        const updated = { ...prev }
+        delete updated[productId]
+        return updated
+      })
+    } else {
+      setReturnItems((prev) => ({ ...prev, [productId]: Math.min(qty, maxQty) }))
+    }
+  }
+
+  const selectedItems = sale?.items?.filter((item: any) => returnItems[item.product_id] > 0) || []
+  const returnTotal = selectedItems.reduce((sum: number, item: any) => {
+    const qty = returnItems[item.product_id] || 0
+    const unitTotal = item.total / item.quantity
+    return sum + unitTotal * qty
+  }, 0)
+
+  const handleReturn = async () => {
+    if (!sale || !user || !currentBranch || selectedItems.length === 0) return
+    if (!reason.trim()) {
+      setError('Please enter a reason for the return.')
+      return
+    }
+
+    setProcessing(true)
+    setError('')
+
+    try {
+      const items = selectedItems.map((item: any) => {
+        const qty = returnItems[item.product_id]
+        const unitPrice = item.unit_price
+        const costPrice = item.cost_price
+        const taxRate = item.tax_rate || 0
+        const unitTax = item.tax_amount / item.quantity
+        const unitTotal = item.total / item.quantity
+        return {
+          product_id: item.product_id,
+          product_name: item.product_name,
+          barcode: item.barcode || undefined,
+          quantity: qty,
+          unit_price: unitPrice,
+          cost_price: costPrice,
+          tax_rate: taxRate,
+          tax_amount: Math.round(unitTax * qty * 100) / 100,
+          total: Math.round(unitTotal * qty * 100) / 100
+        }
+      })
+
+      const subtotal = items.reduce((s: number, i: any) => s + (i.unit_price * i.quantity), 0)
+      const taxAmount = items.reduce((s: number, i: any) => s + i.tax_amount, 0)
+      const total = items.reduce((s: number, i: any) => s + i.total, 0)
+
+      const result = await window.api.sales.return({
+        original_sale_id: sale.id,
+        branch_id: currentBranch.id,
+        user_id: user.id,
+        shift_id: currentShift?.id || null,
+        items,
+        subtotal,
+        tax_amount: taxAmount,
+        total,
+        reason: reason.trim(),
+        refund_method: refundMethod
+      })
+
+      if (result.success) {
+        setSuccess(true)
+      } else {
+        setError(result.error || 'Failed to process return')
+      }
+    } catch (err) {
+      setError((err as Error).message)
+    } finally {
+      setProcessing(false)
+    }
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={() => onClose()}>
+      <DialogContent className="max-w-lg">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <RotateCcw className="h-5 w-5" /> Return / Refund
+          </DialogTitle>
+        </DialogHeader>
+
+        {success ? (
+          <div className="py-8 text-center space-y-3">
+            <div className="mx-auto h-12 w-12 rounded-full bg-green-100 flex items-center justify-center">
+              <RotateCcw className="h-6 w-6 text-green-600" />
+            </div>
+            <h3 className="text-lg font-semibold">Return Processed</h3>
+            <p className="text-sm text-[var(--muted-foreground)]">
+              {formatCurrency(returnTotal, currency)} refunded via {refundMethod}. Items have been restocked.
+            </p>
+            <Button onClick={onClose}>Close</Button>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {/* Invoice Lookup */}
+            <div className="flex gap-2">
+              <Input
+                value={invoiceNumber}
+                onChange={(e) => setInvoiceNumber(e.target.value)}
+                placeholder="Enter invoice number..."
+                onKeyDown={(e) => { if (e.key === 'Enter') lookupSale() }}
+                autoFocus
+              />
+              <Button onClick={lookupSale} disabled={searching || !invoiceNumber.trim()}>
+                {searching ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
+              </Button>
+            </div>
+
+            {/* Sale Found */}
+            {sale && (
+              <>
+                <div className="rounded-lg bg-[var(--muted)] p-3 text-sm space-y-1">
+                  <div className="flex justify-between"><span>Invoice:</span><strong>{sale.invoice_number}</strong></div>
+                  <div className="flex justify-between"><span>Date:</span><span>{new Date(sale.created_at).toLocaleString()}</span></div>
+                  <div className="flex justify-between"><span>Total:</span><strong>{formatCurrency(sale.total, currency)}</strong></div>
+                  {sale.customer_name && <div className="flex justify-between"><span>Customer:</span><span>{sale.customer_name}</span></div>}
+                  {sale.status === 'partial_return' && (
+                    <Badge variant="outline" className="text-orange-600">Partial Return</Badge>
+                  )}
+                </div>
+
+                {/* Items to Return */}
+                <div>
+                  <Label className="text-sm font-medium">Select items to return:</Label>
+                  <div className="mt-2 space-y-2 max-h-48 overflow-y-auto">
+                    {sale.items.map((item: any) => (
+                      <div key={item.product_id} className="flex items-center gap-3 rounded-lg border p-2">
+                        <input
+                          type="checkbox"
+                          checked={!!returnItems[item.product_id]}
+                          onChange={() => toggleItem(item.product_id, item.quantity)}
+                          className="h-4 w-4 accent-[var(--primary)]"
+                        />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium truncate">{item.product_name}</p>
+                          <p className="text-xs text-[var(--muted-foreground)]">
+                            {formatCurrency(item.unit_price, currency)} × {item.quantity}
+                          </p>
+                        </div>
+                        {returnItems[item.product_id] && (
+                          <div className="flex items-center gap-1">
+                            <Button variant="outline" size="sm" className="h-6 w-6 p-0"
+                              onClick={() => updateReturnQty(item.product_id, (returnItems[item.product_id] || 0) - 1, item.quantity)}>
+                              <Minus className="h-3 w-3" />
+                            </Button>
+                            <span className="w-8 text-center text-sm">{returnItems[item.product_id]}</span>
+                            <Button variant="outline" size="sm" className="h-6 w-6 p-0"
+                              onClick={() => updateReturnQty(item.product_id, (returnItems[item.product_id] || 0) + 1, item.quantity)}>
+                              <Plus className="h-3 w-3" />
+                            </Button>
+                          </div>
+                        )}
+                        <span className="text-sm font-medium w-20 text-right">
+                          {formatCurrency(
+                            returnItems[item.product_id]
+                              ? (item.total / item.quantity) * returnItems[item.product_id]
+                              : item.total,
+                            currency
+                          )}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Reason */}
+                <div className="space-y-1">
+                  <Label className="text-sm">Reason for Return</Label>
+                  <Input
+                    value={reason}
+                    onChange={(e) => setReason(e.target.value)}
+                    placeholder="e.g. Defective, wrong item, customer request..."
+                  />
+                </div>
+
+                {/* Refund Method */}
+                <div className="space-y-1">
+                  <Label className="text-sm">Refund Method</Label>
+                  <div className="flex gap-2">
+                    {([
+                      { value: 'cash' as const, label: 'Cash', icon: Banknote },
+                      { value: 'card' as const, label: 'Card', icon: CreditCard }
+                    ]).map((m) => {
+                      const Icon = m.icon
+                      return (
+                        <Button key={m.value} variant={refundMethod === m.value ? 'default' : 'outline'} size="sm"
+                          onClick={() => setRefundMethod(m.value)}>
+                          <Icon className="h-3 w-3 mr-1" /> {m.label}
+                        </Button>
+                      )
+                    })}
+                  </div>
+                </div>
+
+                {/* Refund Total */}
+                <div className="rounded-lg bg-[var(--muted)] p-3 flex justify-between items-center">
+                  <span className="text-sm font-medium">Refund Total:</span>
+                  <span className="text-lg font-bold text-[var(--destructive)]">
+                    {formatCurrency(returnTotal, currency)}
+                  </span>
+                </div>
+              </>
+            )}
+
+            {error && <p className="text-sm text-[var(--destructive)]">{error}</p>}
+          </div>
+        )}
+
+        {!success && (
+          <DialogFooter>
+            <Button variant="outline" onClick={onClose}>Cancel</Button>
+            {sale && (
+              <Button variant="destructive" onClick={handleReturn}
+                disabled={processing || selectedItems.length === 0 || !reason.trim()}>
+                {processing && <Loader2 className="h-4 w-4 animate-spin mr-1" />}
+                Process Return
+              </Button>
+            )}
+          </DialogFooter>
+        )}
       </DialogContent>
     </Dialog>
   )

@@ -2,8 +2,6 @@ import { useState, useEffect } from 'react'
 import { useAppStore } from '@/stores/appStore'
 import { useAuthStore } from '@/stores/authStore'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
@@ -27,12 +25,11 @@ export default function ShiftsPage() {
   const [showReport, setShowReport] = useState(false)
   const [selectedShift, setSelectedShift] = useState<any>(null)
 
-  // Open shift form
-  const [openingCash, setOpeningCash] = useState('')
+  // Open shift
   const [opening, setOpening] = useState(false)
+  const [lastClosingCash, setLastClosingCash] = useState<number | null>(null)
 
   // Close shift form
-  const [closingCash, setClosingCash] = useState('')
   const [closing, setClosing] = useState(false)
   const [closeReport, setCloseReport] = useState<any>(null)
 
@@ -68,8 +65,7 @@ export default function ShiftsPage() {
     try {
       const result = await window.api.shifts.open({
         branch_id: currentBranch.id,
-        user_id: user.id,
-        opening_cash: parseFloat(openingCash) || 0
+        user_id: user.id
       })
       if (result.success) {
         await loadCurrentShift()
@@ -89,10 +85,7 @@ export default function ShiftsPage() {
     if (!currentShift) return
     setClosing(true)
     try {
-      const result = await window.api.shifts.close(
-        currentShift.id,
-        parseFloat(closingCash) || 0
-      )
+      const result = await window.api.shifts.close(currentShift.id)
       if (result.success) {
         setCurrentShift(null)
         setShowClose(false)
@@ -118,8 +111,19 @@ export default function ShiftsPage() {
     // Pre-fetch report data
     const result = await window.api.shifts.getReport(currentShift.id)
     if (result.success) setCloseReport(result.data)
-    setClosingCash('')
     setShowClose(true)
+  }
+
+  const prepareOpen = async () => {
+    // Get last closed shift's closing cash to show as opening amount
+    if (!currentBranch) return
+    const result = await window.api.shifts.list({ branch_id: currentBranch.id, status: 'closed', limit: 1 })
+    if (result.success && result.data?.length > 0) {
+      setLastClosingCash(result.data[0].closing_cash ?? 0)
+    } else {
+      setLastClosingCash(0)
+    }
+    setShowOpen(true)
   }
 
   return (
@@ -135,7 +139,7 @@ export default function ShiftsPage() {
               <StopCircle className="h-4 w-4 mr-1" /> Close Shift
             </Button>
           ) : (
-            <Button onClick={() => { setOpeningCash(''); setShowOpen(true) }}>
+            <Button onClick={prepareOpen}>
               <PlayCircle className="h-4 w-4 mr-1" /> Open Shift
             </Button>
           )}
@@ -162,7 +166,7 @@ export default function ShiftsPage() {
               </div>
               <div>
                 <span className="text-[var(--muted-foreground)]">Sales:</span>
-                <p className="font-medium">{currentShift.total_sales || 0} ({formatCurrency((currentShift as any).total_revenue || 0, currency)})</p>
+                <p className="font-medium">{(currentShift as any).total_transactions || 0} ({formatCurrency(currentShift.total_sales || 0, currency)})</p>
               </div>
             </div>
           </CardContent>
@@ -201,8 +205,8 @@ export default function ShiftsPage() {
                       <TableCell className="text-xs">{shift.closed_at ? formatDateTime(shift.closed_at) : '—'}</TableCell>
                       <TableCell>{(shift as any).user_name || '—'}</TableCell>
                       <TableCell className="text-right">{formatCurrency(shift.opening_cash, currency)}</TableCell>
-                      <TableCell className="text-right">{shift.total_sales || 0}</TableCell>
-                      <TableCell className="text-right">{formatCurrency((shift as any).total_revenue || 0, currency)}</TableCell>
+                      <TableCell className="text-right">{(shift as any).total_transactions || 0}</TableCell>
+                      <TableCell className="text-right">{formatCurrency(shift.total_sales || 0, currency)}</TableCell>
                       <TableCell>
                         <Badge variant={shift.status === 'open' ? 'default' : 'secondary'}>
                           {shift.status}
@@ -229,17 +233,14 @@ export default function ShiftsPage() {
             <DialogTitle>Open Shift</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
-            <div className="space-y-2">
-              <Label>Opening Cash Amount</Label>
-              <Input
-                type="number"
-                value={openingCash}
-                onChange={(e) => setOpeningCash(e.target.value)}
-                placeholder="0.00"
-                min={0}
-                step={0.01}
-                autoFocus
-              />
+            <div className="rounded-lg bg-[var(--muted)] p-4 space-y-2 text-sm">
+              <div className="flex justify-between">
+                <span>Opening Cash (auto):</span>
+                <strong>{formatCurrency(lastClosingCash ?? 0, currency)}</strong>
+              </div>
+              <p className="text-xs text-[var(--muted-foreground)]">
+                Based on the last closed shift's closing cash.
+              </p>
             </div>
           </div>
           <DialogFooter>
@@ -262,41 +263,25 @@ export default function ShiftsPage() {
             {closeReport && (() => {
               const cashTotal = (closeReport.payment_breakdown || []).find((p: any) => p.method === 'cash')?.total || 0
               const cardTotal = (closeReport.payment_breakdown || []).find((p: any) => p.method === 'card')?.total || 0
+              const refunds = currentShift?.total_refunds || 0
+              const expectedCash = (currentShift?.opening_cash || 0) + cashTotal - refunds
               return (
               <div className="rounded-lg bg-[var(--muted)] p-4 space-y-2 text-sm">
+                <div className="flex justify-between"><span>Opening Cash:</span><strong>{formatCurrency(currentShift?.opening_cash || 0, currency)}</strong></div>
                 <div className="flex justify-between"><span>Total Sales:</span><strong>{closeReport.total_sales || 0}</strong></div>
                 <div className="flex justify-between"><span>Cash Sales:</span><strong>{formatCurrency(cashTotal, currency)}</strong></div>
                 <div className="flex justify-between"><span>Card Sales:</span><strong>{formatCurrency(cardTotal, currency)}</strong></div>
-                <div className="flex justify-between"><span>Expected Cash:</span><strong>{formatCurrency((currentShift?.opening_cash || 0) + cashTotal, currency)}</strong></div>
-              </div>
-              )
-            })()}
-            <div className="space-y-2">
-              <Label>Actual Cash in Register</Label>
-              <Input
-                type="number"
-                value={closingCash}
-                onChange={(e) => setClosingCash(e.target.value)}
-                placeholder="Count and enter cash amount"
-                min={0}
-                step={0.01}
-                autoFocus
-              />
-            </div>
-            {closingCash && closeReport && (() => {
-              const cashTotal = (closeReport.payment_breakdown || []).find((p: any) => p.method === 'cash')?.total || 0
-              return (
-              <div className="text-sm">
-                <span>Difference: </span>
-                <span className={
-                  parseFloat(closingCash) - ((currentShift?.opening_cash || 0) + cashTotal) === 0
-                    ? 'text-green-600' : 'text-[var(--destructive)]'
-                }>
-                  {formatCurrency(
-                    parseFloat(closingCash) - ((currentShift?.opening_cash || 0) + cashTotal),
-                    currency
-                  )}
-                </span>
+                {refunds > 0 && (
+                  <div className="flex justify-between text-[var(--destructive)]"><span>Refunds:</span><strong>-{formatCurrency(refunds, currency)}</strong></div>
+                )}
+                <hr className="border-[var(--border)]" />
+                <div className="flex justify-between text-base font-bold">
+                  <span>Closing Cash (auto):</span>
+                  <span>{formatCurrency(expectedCash, currency)}</span>
+                </div>
+                <p className="text-xs text-[var(--muted-foreground)]">
+                  Automatically calculated from opening cash + cash sales − refunds.
+                </p>
               </div>
               )
             })()}
