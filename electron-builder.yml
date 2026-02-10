@@ -1,0 +1,45 @@
+appId: com.possystem.app
+productName: POS System
+directories:
+  buildResources: build
+files:
+  - '!**/.vscode/*'
+  - '!src/*'
+  - '!electron.vite.config.*'
+  - '!{.eslintignore,.eslintrc.cjs,.prettierignore,.prettierrc.yaml,dev-app-update.yml,CHANGELOG.md,README.md}'
+  - '!{tsconfig.json,tsconfig.node.json,tsconfig.web.json}'
+asarUnpack:
+  - '**/*.{node,dll}'
+  - node_modules/better-sqlite3/**
+win:
+  target:
+    - target: nsis
+      arch:
+        - x64
+  executableName: POSSystem
+  sign: false
+nsis:
+  artifactName: ${name}-${version}-setup.${ext}
+  shortcutName: POS System
+  uninstallDisplayName: POS System
+  createDesktopShortcut: always
+  oneClick: false
+  allowToChangeInstallationDirectory: true
+mac:
+  target:
+    - target: dmg
+      arch:
+        - x64
+        - arm64
+  entitlementsInherit: build/entitlements.mac.plist
+linux:
+  target:
+    - target: AppImage
+      arch:
+        - x64
+  maintainer: Suhaib
+  category: Office
+publish:
+  provider: github
+  owner: shbmhmd
+  repo: POS-System
