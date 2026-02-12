@@ -12,6 +12,7 @@ import { registerPrinterHandlers } from './printer'
 import { registerGoogleHandlers } from './google'
 import { registerSetupHandlers } from './setup'
 import { registerUpdaterHandlers } from './updater'
+import { registerCustomerHandlers } from './customers'
 
 export function registerAllIpcHandlers(): void {
   registerAuthHandlers()
@@ -28,5 +29,6 @@ export function registerAllIpcHandlers(): void {
   registerGoogleHandlers()
   registerSetupHandlers()
   registerUpdaterHandlers()
+  registerCustomerHandlers()
   console.log('[IPC] All handlers registered')
 }

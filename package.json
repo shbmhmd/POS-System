@@ -1,12 +1,12 @@
 {
   "name": "pos-system",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "POS System - Offline Point of Sale System",
   "main": "./out/main/index.js",
-  "author": "Suhaib",
+  "author": "Unixora <contact@unixora.com>",
   "license": "UNLICENSED",
   "private": true,
-  "copyright": "Copyright © 2026 Suhaib. All rights reserved.",
+  "copyright": "Copyright © 2026 Unixora. All rights reserved.",
   "scripts": {
     "dev": "electron-vite dev",
     "build": "electron-vite build",

@@ -13,6 +13,7 @@ import PurchasesPage from '@/pages/PurchasesPage'
 import ShiftsPage from '@/pages/ShiftsPage'
 import ReportsPage from '@/pages/ReportsPage'
 import SettingsPage from '@/pages/SettingsPage'
+import CustomersPage from '@/pages/CustomersPage'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Loader2, Sparkles } from 'lucide-react'
@@ -95,6 +96,7 @@ export default function App() {
           <Route path="inventory" element={<InventoryPage />} />
           <Route path="purchases" element={<PurchasesPage />} />
           <Route path="shifts" element={<ShiftsPage />} />
+          <Route path="customers" element={<CustomersPage />} />
           <Route path="reports" element={<ReportsPage />} />
           <Route path="settings" element={<SettingsPage />} />
         </Route>
@@ -111,8 +113,8 @@ export default function App() {
               What's New in v{currentVersion}
             </DialogTitle>
           </DialogHeader>
-          <div className="flex-1 overflow-y-auto pr-2 text-sm space-y-2 whitespace-pre-wrap">
-            {formatChangelog(changelog, currentVersion)}
+          <div className="flex-1 overflow-y-auto pr-2">
+            <ChangelogContent raw={changelog} version={currentVersion} />
           </div>
           <div className="pt-3 flex justify-end">
             <Button onClick={() => setShowChangelog(false)}>Got it!</Button>
@@ -123,8 +125,8 @@ export default function App() {
   )
 }
 
-/** Extract only the current version's section from the full changelog */
-function formatChangelog(raw: string, version: string): string {
+/** Extract only the current version's section and render as styled JSX */
+function ChangelogContent({ raw, version }: { raw: string; version: string }) {
   const lines = raw.split('\n')
   const versionHeader = `## [${version}]`
   let capturing = false
@@ -133,15 +135,83 @@ function formatChangelog(raw: string, version: string): string {
   for (const line of lines) {
     if (line.startsWith(versionHeader)) {
       capturing = true
-      continue // skip the header line itself
+      continue
     }
-    if (capturing && line.startsWith('## [')) {
-      break // hit the next version section
+    if (capturing && line.startsWith('## [')) break
+    if (capturing) result.push(line)
+  }
+
+  const content = result.join('\n').trim() || raw
+
+  // Parse markdown into structured sections
+  const sections: { title: string; items: string[] }[] = []
+  let currentSection: { title: string; items: string[] } | null = null
+
+  for (const line of content.split('\n')) {
+    const sectionMatch = line.match(/^###\s+(.+)/)
+    if (sectionMatch) {
+      currentSection = { title: sectionMatch[1], items: [] }
+      sections.push(currentSection)
+      continue
     }
-    if (capturing) {
-      result.push(line)
+    const itemMatch = line.match(/^-\s+(.+)/)
+    if (itemMatch && currentSection) {
+      currentSection.items.push(itemMatch[1])
     }
   }
 
-  return result.join('\n').trim() || raw
+  if (sections.length === 0) {
+    return <p className="text-sm text-[var(--muted-foreground)]">{content}</p>
+  }
+
+  const sectionIcon: Record<string, string> = {
+    Added: '✨',
+    Changed: '🔄',
+    Fixed: '🐛',
+    Removed: '🗑️',
+    Security: '🔒',
+    Deprecated: '⚠️'
+  }
+
+  const sectionColor: Record<string, string> = {
+    Added: 'text-green-500',
+    Changed: 'text-blue-500',
+    Fixed: 'text-orange-500',
+    Removed: 'text-red-500',
+    Security: 'text-purple-500',
+    Deprecated: 'text-yellow-500'
+  }
+
+  // Render inline bold **text**
+  const renderText = (text: string) => {
+    const parts = text.split(/(\*\*[^*]+\*\*)/)
+    return parts.map((part, i) => {
+      const boldMatch = part.match(/^\*\*(.+)\*\*$/)
+      if (boldMatch) {
+        return <strong key={i} className="font-semibold text-[var(--foreground)]">{boldMatch[1]}</strong>
+      }
+      return <span key={i}>{part}</span>
+    })
+  }
+
+  return (
+    <div className="space-y-4">
+      {sections.map((section, si) => (
+        <div key={si}>
+          <div className={`flex items-center gap-2 text-sm font-semibold mb-2 ${sectionColor[section.title] || 'text-[var(--foreground)]'}`}>
+            <span>{sectionIcon[section.title] || '📋'}</span>
+            <span>{section.title}</span>
+          </div>
+          <ul className="space-y-1.5 ml-1">
+            {section.items.map((item, ii) => (
+              <li key={ii} className="flex items-start gap-2 text-sm text-[var(--muted-foreground)]">
+                <span className="mt-1.5 h-1.5 w-1.5 rounded-full bg-current flex-shrink-0" />
+                <span>{renderText(item)}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ))}
+    </div>
+  )
 }

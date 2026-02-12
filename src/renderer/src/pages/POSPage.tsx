@@ -366,12 +366,15 @@ export default function POSPage() {
 function PaymentDialog({ open, onClose, currency }: { open: boolean; onClose: () => void; currency: string }) {
   const cart = useCartStore()
   const { user } = useAuthStore()
-  const { currentBranch, currentShift } = useAppStore()
+  const { currentBranch, currentShift, business } = useAppStore()
 
   const [payments, setPayments] = useState<{ method: PaymentMethod; amount: number }[]>([
     { method: 'cash', amount: 0 }
   ])
   const [customerName, setCustomerName] = useState('')
+  const [selectedCustomerId, setSelectedCustomerId] = useState<number | null>(null)
+  const [customerSuggestions, setCustomerSuggestions] = useState<any[]>([])
+  const [showSuggestions, setShowSuggestions] = useState(false)
   const [processing, setProcessing] = useState(false)
   const [error, setError] = useState('')
 
@@ -385,9 +388,36 @@ function PaymentDialog({ open, onClose, currency }: { open: boolean; onClose: ()
     if (open) {
       setPayments([{ method: 'cash', amount: total }])
       setCustomerName('')
+      setSelectedCustomerId(null)
+      setCustomerSuggestions([])
+      setShowSuggestions(false)
       setError('')
     }
   }, [open, total])
+
+  // Customer search
+  const searchCustomers = async (query: string) => {
+    setCustomerName(query)
+    setSelectedCustomerId(null)
+    if (query.trim().length < 2) {
+      setCustomerSuggestions([])
+      setShowSuggestions(false)
+      return
+    }
+    try {
+      const result = await window.api.customers.search(query.trim(), 5)
+      if (result.success) {
+        setCustomerSuggestions(result.data || [])
+        setShowSuggestions(true)
+      }
+    } catch { /* ignore */ }
+  }
+
+  const selectCustomer = (c: any) => {
+    setCustomerName(c.name)
+    setSelectedCustomerId(c.id)
+    setShowSuggestions(false)
+  }
 
   const handlePayment = async () => {
     if (remaining > 0) {
@@ -419,6 +449,7 @@ function PaymentDialog({ open, onClose, currency }: { open: boolean; onClose: ()
         })),
         payments: payments.filter((p) => p.amount > 0),
         customer_name: customerName.trim() || undefined,
+        customer_id: selectedCustomerId || undefined,
         subtotal: cart.getSubtotal(),
         discount_amount: cart.getDiscountAmount() || 0,
         discount_type: cart.billDiscountType || 'fixed',
@@ -427,9 +458,38 @@ function PaymentDialog({ open, onClose, currency }: { open: boolean; onClose: ()
       })
 
       if (result.success) {
+        // Print receipt silently
+        try {
+          await window.api.printer.printReceipt({
+            business_name: business?.name || '',
+            branch_name: currentBranch.name,
+            branch_address: currentBranch.address || '',
+            branch_phone: currentBranch.phone || '',
+            invoice_number: result.data?.invoiceNumber || '',
+            date: new Date().toLocaleString(),
+            cashier: user.name,
+            customer_name: customerName.trim() || undefined,
+            items: cart.items.map((item) => ({
+              name: item.product_name,
+              qty: item.quantity,
+              price: item.unit_price,
+              total: item.total
+            })),
+            subtotal: cart.getSubtotal(),
+            discount: cart.getDiscountAmount() || 0,
+            tax: cart.getTaxAmount() || 0,
+            total: cart.getTotal(),
+            payments: payments.filter((p) => p.amount > 0).map((p) => ({
+              method: p.method,
+              amount: p.amount
+            })),
+            change: change > 0 ? change : undefined
+          })
+        } catch {
+          // Silent fail - don't block sale completion for print errors
+        }
         cart.clearCart()
         onClose()
-        // TODO: Print receipt
       } else {
         setError(result.error || 'Failed to complete sale')
       }
@@ -454,9 +514,33 @@ function PaymentDialog({ open, onClose, currency }: { open: boolean; onClose: ()
           </div>
 
           {/* Customer Name */}
-          <div className="space-y-1">
+          <div className="space-y-1 relative">
             <Label className="text-xs">Customer Name (optional)</Label>
-            <Input value={customerName} onChange={(e) => setCustomerName(e.target.value)} placeholder="Walk-in" />
+            <Input
+              value={customerName}
+              onChange={(e) => searchCustomers(e.target.value)}
+              onFocus={() => customerSuggestions.length > 0 && setShowSuggestions(true)}
+              onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
+              placeholder="Walk-in or search customer..."
+            />
+            {selectedCustomerId && (
+              <span className="absolute right-2 top-7 text-xs text-green-500">✓ linked</span>
+            )}
+            {showSuggestions && customerSuggestions.length > 0 && (
+              <div className="absolute z-50 w-full mt-1 bg-[var(--card)] border border-[var(--border)] rounded-md shadow-lg max-h-40 overflow-y-auto">
+                {customerSuggestions.map((c) => (
+                  <button
+                    key={c.id}
+                    type="button"
+                    className="w-full text-left px-3 py-2 text-sm hover:bg-[var(--accent)] flex justify-between"
+                    onMouseDown={() => selectCustomer(c)}
+                  >
+                    <span>{c.name}</span>
+                    {c.phone && <span className="text-xs text-muted-foreground">{c.phone}</span>}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Payment Methods */}

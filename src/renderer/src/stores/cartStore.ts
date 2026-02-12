@@ -1,6 +1,11 @@
 import { create } from 'zustand'
 import type { CartItem, Product, PaymentMethod } from '@/types'
 import { generateId, calculateTax } from '@/lib/utils'
+import { useAppStore } from './appStore'
+
+function getTaxMode(): 'inclusive' | 'exclusive' {
+  return useAppStore.getState().business?.tax_mode || 'exclusive'
+}
 
 interface PaymentEntry {
   method: PaymentMethod
@@ -149,7 +154,7 @@ export const useCartStore = create<CartState>((set, get) => ({
           if (item.id !== cartItemId) return item
           const newQty = item.quantity + delta
           if (newQty <= 0) return null
-          return recalcItem({ ...item, quantity: newQty }, 'exclusive') // TODO: get tax mode from app store
+          return recalcItem({ ...item, quantity: newQty }, getTaxMode())
         })
         .filter(Boolean) as CartItem[]
 
@@ -165,7 +170,7 @@ export const useCartStore = create<CartState>((set, get) => ({
     set((state) => ({
       items: state.items.map((item) =>
         item.id === cartItemId
-          ? recalcItem({ ...item, quantity }, 'exclusive')
+          ? recalcItem({ ...item, quantity }, getTaxMode())
           : item
       )
     }))
@@ -175,7 +180,7 @@ export const useCartStore = create<CartState>((set, get) => ({
     set((state) => ({
       items: state.items.map((item) =>
         item.id === cartItemId
-          ? recalcItem({ ...item, discount_amount: amount, discount_type: type }, 'exclusive')
+          ? recalcItem({ ...item, discount_amount: amount, discount_type: type }, getTaxMode())
           : item
       )
     }))

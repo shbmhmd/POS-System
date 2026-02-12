@@ -73,6 +73,20 @@ export interface User {
   permissions: Record<string, string>
 }
 
+// ========== Customer ==========
+export interface Customer {
+  id: number
+  name: string
+  phone: string | null
+  email: string | null
+  address: string | null
+  balance: number
+  notes: string | null
+  is_active: number
+  created_at: string
+  updated_at: string
+}
+
 // ========== Category ==========
 export interface Category {
   id: number
@@ -134,6 +148,7 @@ export interface Sale {
   cashier_name?: string
   shift_id: number | null
   customer_name: string | null
+  customer_id: number | null
   subtotal: number
   discount_amount: number
   discount_type: string

@@ -1,6 +1,24 @@
 # Changelog
 
-All notable changes to POS System will be documented in this file.
+All notable changes to Unixora Point will be documented in this file.
+
+## [1.0.3] - 2026-02-13
+
+### Added
+- **Customer Management** – Full customer database with name, phone, email, address, and notes. Search, edit, delete, and view purchase history from the Customers page.
+- **Customer Lookup in POS** – Autocomplete search in the payment dialog to link sales to existing customers.
+- **Receipt Printing** – Automatic thermal receipt printing on sale completion (80mm format). Auto-detects physical printers, skips virtual ones (PDF/XPS).
+- **Printer Settings** – Save a default printer, list system printers, send test prints.
+- **Report CSV Export** – Download any report as a CSV file with one click.
+- **Modern Changelog UI** – Changelog dialog now renders with icons, color-coded sections, and clean formatting instead of raw markdown.
+
+### Changed
+- **Branding** – App identity updated to Unixora Point (appId, product name, publisher, installer, shortcuts).
+- **Receipt Footer** – Receipts now show "Powered by Unixora Point | A product of Unixora" at the bottom.
+
+### Fixed
+- **Cart Tax Mode Bug** – Tax calculations in cart (updateQuantity, setQuantity, setItemDiscount) were hardcoded to 'exclusive'. Now correctly reads the tax mode from business settings.
+- **Receipt Save Prompt** – Receipts no longer trigger a "Save As" dialog. The printer handler now resolves a real physical printer instead of defaulting to Microsoft Print to PDF.
 
 ## [1.0.2] - 2026-02-11
 

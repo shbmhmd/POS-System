@@ -14,6 +14,40 @@ import { BarChart3, Loader2, Download, Calendar, TrendingUp, DollarSign, PieChar
 
 type ReportType = 'daily-sales' | 'by-product' | 'by-category' | 'payment' | 'profit' | 'tax' | 'cashier'
 
+const REPORT_CSV_COLUMNS: Record<ReportType, { headers: string[]; fields: string[] }> = {
+  'daily-sales': { headers: ['Date', 'Transactions', 'Revenue'], fields: ['date', 'total_transactions', 'total_sales'] },
+  'by-product': { headers: ['Product', 'Qty Sold', 'Revenue'], fields: ['product_name', 'qty_sold', 'revenue'] },
+  'by-category': { headers: ['Category', 'Qty Sold', 'Revenue'], fields: ['category_name', 'qty_sold', 'revenue'] },
+  payment: { headers: ['Method', 'Count', 'Amount'], fields: ['method', 'count', 'total'] },
+  profit: { headers: ['Date', 'Revenue', 'Cost', 'Profit', 'Margin %'], fields: ['date', 'revenue', 'cost', 'profit', 'margin_pct'] },
+  tax: { headers: ['Date', 'Taxable', 'Tax', 'Total'], fields: ['date', 'taxable_amount', 'tax_collected', 'total_with_tax'] },
+  cashier: { headers: ['Cashier', 'Sales', 'Revenue', 'Avg Sale'], fields: ['cashier_name', 'sales_count', 'total_sales', 'avg_sale_value'] }
+}
+
+function exportCSV(reportType: ReportType, data: any[]) {
+  if (!data || data.length === 0) return
+  const { headers, fields } = REPORT_CSV_COLUMNS[reportType]
+  const csvRows = [headers.join(',')]
+  for (const row of data) {
+    csvRows.push(
+      fields
+        .map((f) => {
+          const val = row[f] ?? ''
+          const str = String(val)
+          return str.includes(',') || str.includes('"') ? `"${str.replace(/"/g, '""')}"` : str
+        })
+        .join(',')
+    )
+  }
+  const blob = new Blob([csvRows.join('\n')], { type: 'text/csv;charset=utf-8;' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = `${reportType}-report-${new Date().toISOString().split('T')[0]}.csv`
+  a.click()
+  URL.revokeObjectURL(url)
+}
+
 export default function ReportsPage() {
   const { currentBranch, business } = useAppStore()
   const currency = business?.currency || 'USD'
@@ -108,6 +142,11 @@ export default function ReportsPage() {
         <Button variant="outline" onClick={loadReport}>
           <BarChart3 className="h-4 w-4 mr-1" /> Refresh
         </Button>
+        {data && Array.isArray(data) && data.length > 0 && (
+          <Button variant="outline" onClick={() => exportCSV(reportType, data)}>
+            <Download className="h-4 w-4 mr-1" /> Export CSV
+          </Button>
+        )}
       </div>
 
       {/* Report Content */}

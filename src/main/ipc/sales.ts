@@ -6,6 +6,7 @@ interface CreateSaleData {
   user_id: number
   shift_id: number | null
   customer_name?: string
+  customer_id?: number | null
   items: {
     product_id: number
     product_name: string
@@ -68,9 +69,9 @@ export function registerSalesHandlers(): void {
         // Insert sale
         const saleResult = db
           .prepare(
-            `INSERT INTO sales (invoice_number, branch_id, user_id, shift_id, customer_name,
+            `INSERT INTO sales (invoice_number, branch_id, user_id, shift_id, customer_name, customer_id,
                                 subtotal, discount_amount, discount_type, tax_amount, total, notes)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
           )
           .run(
             invoiceNumber,
@@ -78,6 +79,7 @@ export function registerSalesHandlers(): void {
             saleData.user_id,
             saleData.shift_id,
             saleData.customer_name ?? null,
+            saleData.customer_id ?? null,
             saleData.subtotal,
             saleData.discount_amount,
             saleData.discount_type,

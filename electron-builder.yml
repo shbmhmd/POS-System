@@ -1,5 +1,5 @@
-appId: com.possystem.app
-productName: POS System
+appId: com.unixora.point
+productName: Unixora Point
 directories:
   buildResources: build
 files:
@@ -19,12 +19,14 @@ win:
     - target: nsis
       arch:
         - x64
-  executableName: POSSystem
+  executableName: UnixoraPoint
+  publisherName: Unixora
+  legalTrademarks: "Copyright © 2026 Unixora. All rights reserved."
   sign: false
 nsis:
   artifactName: ${name}-${version}-setup.${ext}
-  shortcutName: POS System
-  uninstallDisplayName: POS System
+  shortcutName: Unixora Point
+  uninstallDisplayName: Unixora Point
   createDesktopShortcut: always
   oneClick: false
   allowToChangeInstallationDirectory: true
@@ -40,7 +42,7 @@ linux:
     - target: AppImage
       arch:
         - x64
-  maintainer: Suhaib
+  maintainer: Unixora
   category: Office
 publish:
   provider: github

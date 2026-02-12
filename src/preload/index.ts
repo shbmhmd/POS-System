@@ -135,12 +135,25 @@ const api = {
     dashboard: (branchId: number) => ipcRenderer.invoke('reports:dashboard', branchId)
   },
 
+  // ========== Customers ==========
+  customers: {
+    list: (filters?: any) => ipcRenderer.invoke('customers:list', filters),
+    search: (query: string, limit?: number) => ipcRenderer.invoke('customers:search', query, limit),
+    get: (id: number) => ipcRenderer.invoke('customers:get', id),
+    history: (customerId: number, limit?: number) =>
+      ipcRenderer.invoke('customers:history', customerId, limit),
+    create: (data: any) => ipcRenderer.invoke('customers:create', data),
+    update: (id: number, data: any) => ipcRenderer.invoke('customers:update', id, data),
+    delete: (id: number) => ipcRenderer.invoke('customers:delete', id)
+  },
+
   // ========== Printer ==========
   printer: {
     getPrinters: () => ipcRenderer.invoke('printer:get-printers'),
     test: (printerName: string) => ipcRenderer.invoke('printer:test', printerName),
-    printReceipt: (data: any) => ipcRenderer.invoke('printer:print-receipt', data),
-    setDefault: (printerName: string) => ipcRenderer.invoke('printer:set-default', printerName)
+    printReceipt: (data: any, printerName?: string) => ipcRenderer.invoke('printer:print-receipt', data, printerName),
+    setDefault: (printerName: string) => ipcRenderer.invoke('printer:set-default', printerName),
+    getDefault: () => ipcRenderer.invoke('printer:get-default')
   },
 
   // ========== Google ==========

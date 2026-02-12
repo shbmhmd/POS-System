@@ -7,10 +7,12 @@ import { app } from 'electron'
 // We import the SQL files as raw strings at build time via Vite's ?raw suffix.
 import migration001 from './migrations/001_init.sql?raw'
 import migration002 from './migrations/002_payment_methods.sql?raw'
+import migration003 from './migrations/003_customers.sql?raw'
 
 const MIGRATIONS: [string, string][] = [
   ['001_init.sql', migration001],
-  ['002_payment_methods.sql', migration002]
+  ['002_payment_methods.sql', migration002],
+  ['003_customers.sql', migration003]
 ]
 
 export function runMigrations(db: Database.Database): void {

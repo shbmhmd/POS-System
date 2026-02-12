@@ -15,7 +15,8 @@ import {
   LogOut,
   ChevronLeft,
   ChevronRight,
-  Store
+  Store,
+  Users
 } from 'lucide-react'
 import { useState } from 'react'
 
@@ -34,6 +35,7 @@ const navItems: NavItem[] = [
   { to: '/inventory', icon: Warehouse, label: 'Inventory' },
   { to: '/purchases', icon: Truck, label: 'Purchases', permissionKey: 'manage_purchases' },
   { to: '/shifts', icon: Clock, label: 'Shifts' },
+  { to: '/customers', icon: Users, label: 'Customers' },
   { to: '/reports', icon: BarChart3, label: 'Reports', permissionKey: 'reports_access' },
   { to: '/settings', icon: Settings, label: 'Settings', permissionKey: 'manage_settings' }
 ]
